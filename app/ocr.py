@@ -65,7 +65,7 @@ def extract_invoice_fields(raw_text):
         if line.strip()
     ]
 
-    return {
+    fields = {
         "invoice_number": extract_invoice_number(lines),
         "invoice_date": extract_invoice_date(lines),
         "vendor_name": extract_vendor_name(lines),
@@ -80,6 +80,10 @@ def extract_invoice_fields(raw_text):
         "port_discharge": extract_port_discharge(lines),
         "package_count": extract_package_count(text),
     }
+
+    print(fields)
+
+    return fields
 
 
 # =========================
@@ -161,96 +165,204 @@ def extract_invoice_date(lines):
 
 def extract_vendor_name(lines):
 
-    labels = [
-        "exporter",
-        "supplier",
-        "vendor",
-        "seller"
+    patterns = [
+        r'exporter\s*:?\s*(.+)',
+        r'vendor\s*:?\s*(.+)',
+        r'supplier\s*:?\s*(.+)'
     ]
 
     bad_words = [
         "invoice",
         "date",
         "gst",
-        "port",
         "weight",
-        "shipping",
-        "checklist",
-        "printed"
+        "port",
+        "printed",
+        "checklist"
     ]
 
-    for i, line in enumerate(lines):
+    for line in lines:
 
-        lower = line.lower()
+        for pattern in patterns:
 
-        if any(label in lower for label in labels):
+            match = re.search(
+                pattern,
+                line,
+                re.IGNORECASE
+            )
 
-            for j in range(i + 1, min(i + 6, len(lines))):
+            if match:
 
-                candidate = lines[j].strip()
-
-                candidate_lower = candidate.lower()
+                candidate = match.group(1).strip()
 
                 if (
                     len(candidate) > 5
                     and not any(
-                        word in candidate_lower
-                        for word in bad_words
+                        w in candidate.lower()
+                        for w in bad_words
                     )
-                    and any(c.isalpha() for c in candidate)
                 ):
                     return candidate
 
     return None
 def extract_destination_country(lines):
 
-    keywords = [
-        "country of final destination",
-        "discharge country",
-        "country of dest"
-    ]
-
     for i, line in enumerate(lines):
 
         lower = line.lower()
 
-        if any(k in lower for k in keywords):
+        if (
+            "country of final destination" in lower
+            or "discharge country" in lower
+            or "country of dest" in lower
+        ):
+
+            countries = [
+                "romania",
+                "india",
+                "usa",
+                "germany",
+                "france",
+                "italy",
+                "uk"
+            ]
+
+            for country in countries:
+                if country in lower:
+                    return country.title()
 
             for j in range(i + 1, min(i + 4, len(lines))):
 
                 candidate = lines[j].strip()
 
-                if len(candidate) > 2 and candidate.isupper():
+                if (
+                    candidate.isalpha()
+                    and len(candidate) > 3
+                ):
                     return candidate.title()
 
     return None
 def extract_port_loading(lines):
 
-    for i, line in enumerate(lines):
+    ignore_words = [
+        "weight",
+        "gross",
+        "net",
+        "description",
+        "delivery",
+        "invoice",
+        "lut",
+        "total"
+    ]
 
-        if "port of loading" in line.lower():
+    for line in lines:
 
-            for j in range(i + 1, min(i + 4, len(lines))):
+        line_lower = line.lower()
 
-                candidate = lines[j].strip()
+        if "port of loading" in line_lower:
 
-                if len(candidate) > 4:
-                    return candidate
+            # direct extraction
+            match = re.search(
+                r'port of loading\s*[:\-]?\s*([A-Za-z ()]+)',
+                line,
+                re.IGNORECASE
+            )
+
+            if match:
+
+                value = match.group(1).strip()
+
+                value = re.sub(
+                    r'port of discharge.*',
+                    '',
+                    value,
+                    flags=re.IGNORECASE
+                ).strip()
+
+                if (
+                    len(value) > 4
+                    and not any(
+                        word in value.lower()
+                        for word in ignore_words
+                    )
+                ):
+                    return value
+
+    # fallback
+    known_ports = [
+        "nhava sheva",
+        "mundra",
+        "mumbai",
+        "chennai",
+        "kandla"
+    ]
+
+    text = " ".join(lines).lower()
+
+    for port in known_ports:
+        if port in text:
+            return port.title()
 
     return None
 
 def extract_port_discharge(lines):
 
-    for i, line in enumerate(lines):
+    ignore_words = [
+        "delivery",
+        "description",
+        "invoice",
+        "weight",
+        "gross",
+        "net",
+        "lut",
+        "total"
+    ]
 
-        if "port of discharge" in line.lower():
+    for line in lines:
 
-            for j in range(i + 1, min(i + 4, len(lines))):
+        line_lower = line.lower()
 
-                candidate = lines[j].strip()
+        if "port of discharge" in line_lower:
 
-                if len(candidate) > 4:
-                    return candidate
+            match = re.search(
+                r'port of discharge\s*[:\-]?\s*([A-Za-z ()]+)',
+                line,
+                re.IGNORECASE
+            )
+
+            if match:
+
+                value = match.group(1).strip()
+
+                value = re.sub(
+                    r'place of delivery.*',
+                    '',
+                    value,
+                    flags=re.IGNORECASE
+                ).strip()
+
+                if (
+                    len(value) > 4
+                    and not any(
+                        word in value.lower()
+                        for word in ignore_words
+                    )
+                ):
+                    return value
+
+    # fallback known destinations
+    known_ports = [
+        "constanta",
+        "rotterdam",
+        "hamburg",
+        "singapore"
+    ]
+
+    text = " ".join(lines).lower()
+
+    for port in known_ports:
+        if port in text:
+            return port.title()
 
     return None
 def extract_pan(text):
@@ -276,45 +388,44 @@ def extract_package_count(text):
     return None
 def extract_buyer_name(lines):
 
-    labels = [
-        "buyer",
-        "consignee",
-        "notify party"
+    patterns = [
+        r'buyer.*?:?\s*(.+)',
+        r'consignee.*?:?\s*(.+)',
+        r'notify party.*?:?\s*(.+)'
     ]
 
     bad_words = [
         "invoice",
-        "weight",
-        "checklist",
         "printed",
-        "sea",
-        "port"
+        "weight",
+        "port",
+        "checklist"
     ]
 
-    for i, line in enumerate(lines):
+    for line in lines:
 
-        lower = line.lower()
+        for pattern in patterns:
 
-        if any(label in lower for label in labels):
+            match = re.search(
+                pattern,
+                line,
+                re.IGNORECASE
+            )
 
-            for j in range(i + 1, min(i + 7, len(lines))):
+            if match:
 
-                candidate = lines[j].strip()
-
-                candidate_lower = candidate.lower()
+                candidate = match.group(1).strip()
 
                 if (
                     len(candidate) > 4
                     and not any(
-                        word in candidate_lower
-                        for word in bad_words
+                        w in candidate.lower()
+                        for w in bad_words
                     )
-                    and any(c.isalpha() for c in candidate)
                 ):
                     return candidate
 
     return None
-
 def extract_gstin(text):
 
     matches = re.findall(
@@ -410,9 +521,17 @@ def compare_invoice_fields(inv1, inv2):
 
         elif field in [
             "vendor_name",
-            "buyer_name"
+            "buyer_name",
+            "country_destination",
+            "port_loading",
+            "port_discharge"
         ]:
-            is_match = score >= 0.65
+
+            is_match = (
+                score >= 0.60
+                or str(value1).lower() in str(value2).lower()
+                or str(value2).lower() in str(value1).lower()
+            )
 
         elif field in [
             "gross_weight",
