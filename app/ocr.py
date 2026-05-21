@@ -18,9 +18,14 @@ CRITICAL_FIELDS = [
     "vendor_name",
     "buyer_name",
     "gst_vat_number",
+    "pan_number",
     "total_amount",
     "gross_weight",
     "net_weight",
+    "country_destination",
+    "port_loading",
+    "port_discharge",
+    "package_count",
 ]
 
 
@@ -66,9 +71,14 @@ def extract_invoice_fields(raw_text):
         "vendor_name": extract_vendor_name(lines),
         "buyer_name": extract_buyer_name(lines),
         "gst_vat_number": extract_gstin(text),
+        "pan_number": extract_pan(text),
         "total_amount": extract_total_amount(text),
         "gross_weight": extract_gross_weight(text),
         "net_weight": extract_net_weight(text),
+        "country_destination": extract_destination_country(lines),
+        "port_loading": extract_port_loading(lines),
+        "port_discharge": extract_port_discharge(lines),
+        "package_count": extract_package_count(text),
     }
 
 
@@ -192,8 +202,78 @@ def extract_vendor_name(lines):
                     return candidate
 
     return None
+def extract_destination_country(lines):
 
+    keywords = [
+        "country of final destination",
+        "discharge country",
+        "country of dest"
+    ]
 
+    for i, line in enumerate(lines):
+
+        lower = line.lower()
+
+        if any(k in lower for k in keywords):
+
+            for j in range(i + 1, min(i + 4, len(lines))):
+
+                candidate = lines[j].strip()
+
+                if len(candidate) > 2 and candidate.isupper():
+                    return candidate.title()
+
+    return None
+def extract_port_loading(lines):
+
+    for i, line in enumerate(lines):
+
+        if "port of loading" in line.lower():
+
+            for j in range(i + 1, min(i + 4, len(lines))):
+
+                candidate = lines[j].strip()
+
+                if len(candidate) > 4:
+                    return candidate
+
+    return None
+
+def extract_port_discharge(lines):
+
+    for i, line in enumerate(lines):
+
+        if "port of discharge" in line.lower():
+
+            for j in range(i + 1, min(i + 4, len(lines))):
+
+                candidate = lines[j].strip()
+
+                if len(candidate) > 4:
+                    return candidate
+
+    return None
+def extract_pan(text):
+
+    match = re.search(
+        r'\b[A-Z]{5}[0-9]{4}[A-Z]\b',
+        text,
+        re.IGNORECASE
+    )
+
+    return match.group().upper() if match else None
+def extract_package_count(text):
+
+    match = re.search(
+        r'(\d+)\s*(?:wooden\s*)?(?:box|boxes|package|packages)',
+        text,
+        re.IGNORECASE
+    )
+
+    if match:
+        return int(match.group(1))
+
+    return None
 def extract_buyer_name(lines):
 
     labels = [
