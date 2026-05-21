@@ -1,0 +1,39 @@
+🚀 QUICK START - 5 STEPS ONLY
+==============================
+
+1️⃣ Install Python from https://www.python.org/downloads/
+   ⚠️  CHECK "Add Python to PATH"
+
+2️⃣ Open Command Prompt and run:
+   pip install awsebcli
+   aws configure
+   [Paste your AWS credentials]
+
+3️⃣ Go to your app folder in Command Prompt:
+   cd C:\path\to\Prince-work
+
+4️⃣ Run these commands:
+   eb init -p python-3.11 --region us-east-1
+   eb create production
+   eb open
+
+5️⃣ Wait 5-10 minutes... Your app is LIVE! 🎉
+
+---
+
+📌 NEED TO UPDATE THE APP?
+Just change files and run:
+eb deploy
+
+---
+
+💰 STOP TO SAVE MONEY?
+eb pause
+
+🔄 START AGAIN?
+eb resume
+
+---
+
+❓ QUESTIONS?
+Read README.md for full guide!

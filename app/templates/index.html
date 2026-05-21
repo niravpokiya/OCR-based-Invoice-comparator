@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Invoice Comparison Tool</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px 35px;
+            max-width: 500px;
+            width: 100%;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            color: #333;
+            font-size: 28px;
+            margin-bottom: 8px;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        .file-input-wrapper {
+            position: relative;
+            margin-bottom: 18px;
+        }
+
+        .file-input-label {
+            display: block;
+            color: #333;
+            font-weight: 600;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .file-input-button {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 30px;
+            border: 2px dashed #667eea;
+            border-radius: 10px;
+            background: #f8f9ff;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 14px;
+            color: #667eea;
+            font-weight: 500;
+        }
+
+        .file-input-button:hover {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
+        .file-input-button.has-file {
+            background: #e8f0ff;
+            border-color: #667eea;
+            color: #667eea;
+        }
+
+        .file-name {
+            font-size: 16px;
+            color: #666;
+            margin-top: 12px;
+            display: none;
+            font-weight: 600;
+            padding: 12px;
+            background: #e8f0ff;
+            border-left: 4px solid #667eea;
+            border-radius: 5px;
+        }
+
+        .file-name.show {
+            display: block;
+            color: #28a745;
+            font-weight: 700;
+            font-size: 18px;
+            background: #d4edda;
+            border-left-color: #28a745;
+        }
+
+        .submit-btn {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 20px;
+        }
+
+        .submit-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+        }
+
+        .submit-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .result {
+            margin-top: 30px;
+            padding: 20px;
+            border-radius: 10px;
+            display: none;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .result.success {
+            background: #d4edda;
+            border: 2px solid #28a745;
+            color: #155724;
+        }
+
+        .result.error {
+            background: #f8d7da;
+            border: 2px solid #dc3545;
+            color: #721c24;
+        }
+
+        .result.warning {
+            background: #fff3cd;
+            border: 2px solid #ffc107;
+            color: #856404;
+        }
+
+        .result-title {
+            font-weight: 700;
+            font-size: 18px;
+            margin-bottom: 10px;
+        }
+
+        .result-message {
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            color: #667eea;
+            font-weight: 500;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 30px 20px;
+            }
+
+            .header h1 {
+                font-size: 24px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📄 Invoice Comparison</h1>
+            <p>Compare two invoices to check if they're identical</p>
+        </div>
+
+        <form id="compareForm">
+            <div class="form-group">
+                <div class="file-input-wrapper">
+                    <label class="file-input-label" for="invoice1">First Invoice (PDF or Image)</label>
+                    <label class="file-input-button" for="invoice1">
+                        <span>📁 Click to upload or drag file here</span>
+                    </label>
+                    <input type="file" id="invoice1" name="invoice1" class="file-input" accept=".pdf,.jpg,.jpeg,.png" required>
+                    <div class="file-name" id="file1-name"></div>
+                </div>
+
+                <div class="file-input-wrapper">
+                    <label class="file-input-label" for="invoice2">Second Invoice (PDF or Image)</label>
+                    <label class="file-input-button" for="invoice2">
+                        <span>📁 Click to upload or drag file here</span>
+                    </label>
+                    <input type="file" id="invoice2" name="invoice2" class="file-input" accept=".pdf,.jpg,.jpeg,.png" required>
+                    <div class="file-name" id="file2-name"></div>
+                </div>
+            </div>
+
+            <button type="submit" class="submit-btn">Compare Invoices</button>
+
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                <div class="loading-text">Processing invoices...</div>
+            </div>
+
+            <div class="result" id="result"></div>
+        </form>
+    </div>
+
+    <script>
+        const form = document.getElementById('compareForm');
+        const invoice1 = document.getElementById('invoice1');
+        const invoice2 = document.getElementById('invoice2');
+        const file1Name = document.getElementById('file1-name');
+        const file2Name = document.getElementById('file2-name');
+        const resultDiv = document.getElementById('result');
+        const loading = document.getElementById('loading');
+        const submitBtn = document.querySelector('.submit-btn');
+
+        // File input change handlers
+        invoice1.addEventListener('change', () => {
+            updateFileLabel(invoice1, file1Name);
+        });
+
+        invoice2.addEventListener('change', () => {
+            updateFileLabel(invoice2, file2Name);
+        });
+
+        function updateFileLabel(input, label) {
+            if (input.files.length > 0) {
+                const fileName = input.files[0].name;
+                const fileSize = (input.files[0].size / 1024).toFixed(2); // Size in KB
+                label.innerHTML = `✅ Uploaded: <strong>${fileName}</strong><br><small style="color: #666; font-weight: 400; font-size: 14px;">${fileSize} KB</small>`;
+                label.classList.add('show');
+                input.parentElement.classList.add('has-file');
+            } else {
+                label.classList.remove('show');
+                input.parentElement.classList.remove('has-file');
+            }
+        }
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            if (!invoice1.files[0] || !invoice2.files[0]) {
+                showResult('Please select both invoices', 'error', '⚠️ Missing Files');
+                return;
+            }
+
+            const formData = new FormData(form);
+            resultDiv.style.display = 'none';
+            loading.style.display = 'block';
+            submitBtn.disabled = true;
+
+            try {
+                const response = await fetch('/compare_invoices', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                loading.style.display = 'none';
+                submitBtn.disabled = false;
+
+                if (response.ok) {
+                    const matchingFieldsHtml = renderFields(data.matching_fields, 'Matching Fields');
+                    const differentFieldsHtml = renderFields(data.different_fields, 'Different Fields');
+                    const comparedFields = Array.isArray(data.compared_fields) && data.compared_fields.length
+                        ? `<p><strong>Compared fields:</strong> ${data.compared_fields.join(', ')}</p>`
+                        : '';
+
+                    const message = `
+                        <p>${data.same_invoice ? '✅ Perfect match based on comparable fields.' : '⚠️ The invoices are not identical.'}</p>
+                        <p><strong>Similarity score:</strong> ${data.similarity_score ?? 0}%</p>
+                        ${comparedFields}
+                        ${matchingFieldsHtml}
+                        ${differentFieldsHtml}
+                    `;
+
+                    showResult(
+                        message,
+                        data.same_invoice ? 'success' : 'warning',
+                        data.same_invoice ? '✓ Invoices Match' : '⚠️ Invoices Different'
+                    );
+                } else {
+                    showResult(
+                        data.error || 'An error occurred while processing the invoices.',
+                        'error',
+                        '❌ Error'
+                    );
+                }
+            } catch (error) {
+                loading.style.display = 'none';
+                submitBtn.disabled = false;
+                showResult(
+                    'Connection error. Please try again.',
+                    'error',
+                    '❌ Error'
+                );
+            }
+        });
+
+        function showResult(message, type, title) {
+            resultDiv.innerHTML = `
+                <div class="result-title">${title}</div>
+                <div class="result-message">${message}</div>
+            `;
+            resultDiv.classList.remove('success', 'error', 'warning');
+            resultDiv.classList.add(type);
+            resultDiv.style.display = 'block';
+        }
+
+        function renderFields(fieldObject, title) {
+            if (!fieldObject || Object.keys(fieldObject).length === 0) {
+                return `<p><strong>${title}:</strong> None</p>`;
+            }
+
+            const items = Object.entries(fieldObject).map(([fieldName, details]) => {
+                const value1 = details?.invoice1 ?? '';
+                const value2 = details?.invoice2 ?? '';
+                const score = details?.score ?? 0;
+                return `<li><strong>${formatFieldName(fieldName)}:</strong> Invoice 1 = ${escapeHtml(String(value1))}, Invoice 2 = ${escapeHtml(String(value2))} (${score}%)</li>`;
+            }).join('');
+
+            return `<div style="margin-top: 14px;"><strong>${title}:</strong><ul style="margin: 8px 0 0 18px; line-height: 1.6;">${items}</ul></div>`;
+        }
+
+        function formatFieldName(fieldName) {
+            return fieldName.replace(/_/g, ' ').replace(/\b\w/g, char => char.toUpperCase());
+        }
+
+        function escapeHtml(value) {
+            return value
+                .replaceAll('&', '&amp;')
+                .replaceAll('<', '&lt;')
+                .replaceAll('>', '&gt;')
+                .replaceAll('"', '&quot;')
+                .replaceAll("'", '&#39;');
+        }
+
+        // Drag and drop support
+        function setupDragDrop(input) {
+            const label = input.parentElement;
+
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                label.addEventListener(eventName, preventDefaults, false);
+            });
+
+            function preventDefaults(e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+
+            ['dragenter', 'dragover'].forEach(eventName => {
+                label.addEventListener(eventName, () => {
+                    label.style.background = '#667eea';
+                    label.style.color = 'white';
+                }, false);
+            });
+
+            ['dragleave', 'drop'].forEach(eventName => {
+                label.addEventListener(eventName, () => {
+                    label.style.background = '#f8f9ff';
+                    label.style.color = '#667eea';
+                }, false);
+            });
+
+            label.addEventListener('drop', (e) => {
+                const dt = e.dataTransfer;
+                const files = dt.files;
+                input.files = files;
+                const event = new Event('change', { bubbles: true });
+                input.dispatchEvent(event);
+            }, false);
+        }
+
+        setupDragDrop(invoice1);
+        setupDragDrop(invoice2);
+    </script>
+</body>
+</html>
